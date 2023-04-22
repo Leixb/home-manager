@@ -15,7 +15,7 @@ let
 
   mkEvent = e: [ e.event (escapeShellArg e.command) ];
 
-  args = cfg.extraArgs ++ (concatMap mkTimeout cfg.timeouts)
+  args = (optional cfg.wait "-w") ++ cfg.extraArgs ++ (concatMap mkTimeout cfg.timeouts)
     ++ (concatMap mkEvent cfg.events);
 
 in {
@@ -67,6 +67,12 @@ in {
       defaultText = literalExpression "pkgs.swayidle";
       description = "Swayidle package to install.";
     };
+
+    wait = mkEnableOption ''
+      Wait for command to finish executing before continuing,
+      helpful for ensuring that a before-sleep command has finished before the system goes to sleep.
+      (Note: using this option causes swayidle to block until the command finishes)
+      '';
 
     timeouts = mkOption {
       type = with types; listOf (submodule timeoutModule);
@@ -124,7 +130,7 @@ in {
         # swayidle executes commands using "sh -c", so the PATH needs to contain a shell.
         Environment = [ "PATH=${makeBinPath [ pkgs.bash ]}" ];
         ExecStart =
-          "${cfg.package}/bin/swayidle -w ${concatStringsSep " " args}";
+          "${cfg.package}/bin/swayidle ${concatStringsSep " " args}";
       };
 
       Install = { WantedBy = [ cfg.systemdTarget ]; };
